@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package orders.v1;
+
+option go_package = "example.com/shop/backend/gen/go/orders/v1;ordersv1";
+
+// ایمپورت استاندارد ولیدیشن Buf
+import "buf/validate/validate.proto";
+
+// درخواست ایجاد سفارش
+message CreateOrderRequest {
+  // شناسه کاربر باید حتماً پر باشد و یک UUID استاندارد باشد
+  string user_id = 1 [(buf.validate.field).required = true,(buf.validate.field).string.uuid = true];
+
+  // شناسه محصول اجباری است و طول آن باید بین ۳ تا ۶۴ کاراکتر باشد
+  string product_id = 2 [(buf.validate.field).required = true, (buf.validate.field).string = {min_len: 3, max_len: 64}];
+
+  // تعداد خرید: باید حداقل ۱ و حداکثر ۱۰۰ عدد باشد (جلوگیری از صفر یا مقادیر تخریبی)
+  uint32 quantity = 3 [(buf.validate.field).uint32 = {gte: 1, lte: 100}];
+}
+
+// پاسخ ایجاد سفارش
+message CreateOrderResponse {
+  // شناسه سفارش تولید شده باید UUID باشد
+  string order_id = 1 [(buf.validate.field).string.uuid = true];
+
+  // وضعیت سفارش فقط می‌تواند یکی از مقادیر مشخص باشد
+  string status = 2 [(buf.validate.field).string = {in: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]}];
+}
+
+// درخواست دریافت سفارش
+message GetOrderRequest {
+  // شناسه سفارشی که کاربر استعلام می‌کند باید حتماً پر بوده و فرمت UUID معتبر داشته باشد
+  string order_id = 1 [(buf.validate.field).required = true, (buf.validate.field).string.uuid = true];
+}
+
+// پاسخ دریافت سفارش
+message GetOrderResponse {
+  string order_id = 1 [(buf.validate.field).string.uuid = true];
+  
+  string product_id = 2 [(buf.validate.field).string = {min_len: 3, max_len: 64}];
+
+  uint32 quantity = 3 [(buf.validate.field).uint32.gte = 1];
+
+  string status = 4 [(buf.validate.field).string = {in: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"]}];
+}
+
+
+/*
+message StringRules {
+  // ۱. طول کاراکترها
+  string min_max_name = 1 [(buf.validate.field).string = {
+    min_len: 3,        // حداقل کاراکتر
+    max_len: 50        // حداکثر کاراکتر
+  }];
+  
+  string exact_code   = 2 [(buf.validate.field).string.len = 10]; // دقیقاً ۱۰ کاراکتر (مثلاً کدملی)
+
+  // ۲. فرمت‌های استاندارد (Well-known formats)
+  string user_email   = 3 [(buf.validate.field).string.email = true];
+  string website_url  = 4 [(buf.validate.field).string.uri = true];
+  string client_ip    = 5 [(buf.validate.field).string.ip = true];     // IPv4 یا IPv6
+  string server_ipv4  = 6 [(buf.validate.field).string.ipv4 = true];
+  string tracking_id  = 7 [(buf.validate.field).string.uuid = true];
+
+  // ۳. الگو، شروع و پایان (Regex & Substrings)
+  string mobile_ir    = 8 [(buf.validate.field).string.pattern = "^09[0-9]{9}$"]; // اعتبارسنجی با ریجکس
+  string prefix_test  = 9 [(buf.validate.field).string.prefix = "USR-"];
+  string suffix_test  = 10 [(buf.validate.field).string.suffix = ".pdf"];
+  string contains_test = 11 [(buf.validate.field).string.contains = "@company.com"];
+
+  // ۴. مقادیر مجاز (Enum-like string)
+  string status       = 12 [(buf.validate.field).string = {
+    in: ["ACTIVE", "PENDING", "ARCHIVED"]
+  }];
+  string forbidden    = 13 [(buf.validate.field).string = {
+    not_in: ["ROOT", "ADMIN"]
+  }];
+}
+*/
