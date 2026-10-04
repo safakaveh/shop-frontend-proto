@@ -13,13 +13,18 @@ import (
 	"example.com/shop/backend/gateway/internal/config"
 	"example.com/shop/backend/gateway/internal/gateway"
 
+	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	nc, err := nats.Connect(

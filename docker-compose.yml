@@ -1,0 +1,78 @@
+name: sample-gateway
+
+services:
+
+  nats:
+    image: nats:2.14.6-alpine3.22
+    container_name: api-gateway-nats
+    restart: unless-stopped
+
+    command:
+      - "-js"
+      - "-m"
+      - "8222"
+
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "-q",
+          "http://localhost:8222/healthz"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: api-gateway
+
+    restart: unless-stopped
+
+    command:
+      - "/app/gateway"
+
+    environment:
+      APP_NAME: api-gateway
+      HTTP_ADDR: ":8080"
+      NATS_URL: "nats://nats:4222"
+      PROJECT_NAME: "myproject"
+      HTTP_TIMEOUT: "5"
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      nats:
+        condition: service_healthy
+
+
+  userservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: api-gateway-userservice
+
+    restart: unless-stopped
+
+    command:
+      - "/app/userservice"
+
+    environment:
+      NATS_URL: "nats://nats:4222"
+      PROJECT_NAME: "myproject"
+
+    depends_on:
+      nats:
+        condition: service_healthy
