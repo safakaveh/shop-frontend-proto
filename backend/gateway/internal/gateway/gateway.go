@@ -99,7 +99,7 @@ func (g *Gateway) requestAndWrite(
 		return
 	}
 
-	if len(reply.Data) > g.cfg.MaxBodyBytes {
+	if int64(len(reply.Data)) > g.cfg.MaxBodyBytes {
 		writeProblem(w, http.StatusBadGateway, "upstream_response_too_large")
 		return
 	}

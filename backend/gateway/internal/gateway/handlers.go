@@ -11,6 +11,7 @@ import (
 
 	ordersv1 "example.com/shop/backend/gen/go/orders/v1"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
@@ -64,7 +65,7 @@ func (g *Gateway) getOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	defer g.release()
 
-	orderID := strings.TrimSpace(chiURLParam(r, "orderID"))
+	orderID := strings.TrimSpace(chi.URLParam(r, "orderID"))
 	if orderID == "" || len(orderID) > 128 {
 		writeProblem(w, http.StatusBadRequest, "invalid_order_id")
 		return

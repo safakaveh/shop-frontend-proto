@@ -9,17 +9,10 @@
 ابتدا ابزار `buf` و پلاگین‌های کامپایلر را نصب کنید:
 
 ```bash
-# ۱. نصب باینری رسمی Buf
-PREFIX="/usr/local"
-VERSION="1.30.0" # یا جدیدترین نسخه
-curl -sSL \
-  "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-$(uname -s)-$(uname -m)" \
-  -o "${PREFIX}/bin/buf" && \
-  chmod +x "${PREFIX}/bin/buf"
-
-# ۲. نصب پلاگین‌های Go (با Go Toolchain)
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install github.com/bufbuild/buf-plugin-protovalidate/cmd/protoc-gen-buf-validate@latest
+sudo curl -sSL \
+  "https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m)" \
+  -o /usr/local/bin/buf
+sudo chmod +x /usr/local/bin/buf
 
 # مطمئن شوید مسیر Go bin در PATH لینوکس شما هست:
 export PATH="$PATH:$(go env GOPATH)/bin"
@@ -29,7 +22,14 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 
 ```bash
 npm install -D @bufbuild/buf @bufbuild/protoc-gen-es
+npm install @bufbuild/protovalidate
 npm install @bufbuild/protobuf
+```
+
+برای سمت Go lang
+
+```bash
+go get buf.build/go/protovalidate
 ```
 
 ---
@@ -40,24 +40,19 @@ npm install @bufbuild/protobuf
 
 ```yaml
 version: v2
+
 plugins:
-  # ۱. جنریت کدهای Go
   - remote: buf.build/protocolbuffers/go
-    out: backend/gen/go
+    out: ../backend/gen/go
     opt:
       - paths=source_relative
 
-  # ۲. جنریت کدهای اعتبارسنجی Go (protovalidate)
-  - remote: buf.build/bufbuild/validate-go
-    out: backend/gen/go
-    opt:
-      - paths=source_relative
-
-  # ۳. جنریت کدهای TypeScript برای SvelteKit (BFF)
   - remote: buf.build/bufbuild/es
-    out: frontend/src/lib/gen
+    out: ../frontend/src/lib/gen
     opt:
       - target=ts
+      - import_extension=none
+    include_imports: true
 ```
 
 > **نکته تحریم/شبکه:** در ایران اگر دسترسی به `buf.build` (Remote Plugins) به دلیل تحریم یا محدودیت شبکه تایم‌اوت خورد، می‌توانید از پلاگین‌های لوکال استفاده کنید:
@@ -110,3 +105,45 @@ proto:
 ```bash
 make proto
 ```
+پورت `1717` متعلق به دستور **SSH** است (احتمالاً با دستور `ssh -D 1717 ...` یک تونل داینامیک باز کرده‌اید).
+
+تونل داینامیک SSH صرفاً یک **SOCKS5 Proxy** است و ترافیک HTTP عادی را مستقیماً متوجه نمی‌شود. به همین دلیل وقتی `HTTP_PROXY="http://..."` دادید، با خطای `Proxy CONNECT aborted` مواجه شدید.
+
+علاوه بر این، در محیط‌های Go/Buf، ابزارها به متغیر استاندارد **`ALL_PROXY`** با فرمت SOCKS5 توجه می‌کنند.
+
+---
+
+### تست و فعال‌سازی روی همان SSH Tunnel:
+
+۱. ابتدا با `curl` بررسی کنید که آیا تونل درست کار می‌کند یا خیر (از پروتکل `socks5h` استفاده کنید تا DNS هم از سرور SSH رد شود):
+
+```bash
+curl -x socks5h://127.0.0.1:1717 -I https://buf.build
+```
+
+باید خروجی با کد `200` یا `301` دریافت کنید.
+
+---
+
+۲. اگر تست بالا موفق بود، متغیرها را دقیقاً به شکل زیر در همان ترمینال ست کنید:
+
+```bash
+export ALL_PROXY="socks5h://127.0.0.1:1717"
+export all_proxy="socks5h://127.0.0.1:1717"
+export HTTP_PROXY="socks5h://127.0.0.1:1717"
+export HTTPS_PROXY="socks5h://127.0.0.1:1717"
+export http_proxy="socks5h://127.0.0.1:1717"
+export https_proxy="socks5h://127.0.0.1:1717"
+```
+
+---
+
+۳. حالا وارد پوشه proto شده و دستورات را اجرا کنید:
+
+```bash
+cd ~/Programs/Golang/sample-protobuf/proto
+buf dep update
+buf generate
+```
+
+این بار ارتباط با رجیستری `buf.build` از طریق سرور SSH شما عبور کرده و وابستگی‌ها و پلاگین‌ها بدون خطای 403 دانلود می‌شوند.

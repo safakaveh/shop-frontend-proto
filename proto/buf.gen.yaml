@@ -10,3 +10,5 @@ plugins:
     out: ../frontend/src/lib/gen
     opt:
       - target=ts
+      - import_extension=none
+    include_imports: true
