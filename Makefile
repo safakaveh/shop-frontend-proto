@@ -1,3 +1,5 @@
+//npm install @bufbuild/protobuf @connectrpc/connect @connectrpc/connect-web
+
 APP_NAME := api-gateway
 GATEWAY_BIN := bin/gateway
 USERSERVICE_BIN := bin/userservice
